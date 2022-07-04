@@ -1,0 +1,148 @@
+import re
+
+import scrapy
+import openpyxl
+import json
+from pathlib import Path
+from scrapy.loader import ItemLoader
+from stock_market.items import StockMarketItem
+from itemloaders.processors import Join, MapCompose, TakeFirst
+import chompjs
+
+
+class StockMarketSpider(scrapy.Spider):
+    name = "stock_market"
+    companies = []
+    custom_settings = {
+         'FEED_EXPORTERS': {
+    #         'json': 'scrapy.exporters.JsonItemExporter',
+             'xlsx': 'scrapy_xlsx.XlsxItemExporter',
+         },
+        'FEEDS': {"stock.xlsx": {"format": "xlsx"},
+            "stock.csv": {"format": "csv"}, }
+    }
+
+    def start_requests(self):
+
+        # Get the companies list
+        companies_file = Path('companies.json')
+        with open(companies_file) as file:
+            self.companies = json.load(file)
+
+        # Extract the tickers from the first column
+        xlsx_file = Path('Stock Market.xlsx')
+        wb_obj = openpyxl.load_workbook(xlsx_file)
+        sheet = wb_obj.active
+
+        for row in sheet.iter_rows(min_row=2, max_row=5, max_col=1, values_only=True):
+            # Create an item
+            stock_market_item = StockMarketItem()
+            # Get 'Ticker' field
+            stock_market_item['Ticker'] = row[0]
+            # Scrap dividends
+            dividend_uri = self.companies[row[0]]['uri'] + 'dividend/'
+            yield scrapy.Request(url=dividend_uri, callback=self.get_dividend,
+                                 meta={'item': stock_market_item})
+            # Scrap earnings
+            # earnings_uri = self.companies[row[0]]['uri']
+            # yield scrapy.Request(url=earnings_uri, callback=self.get_earnings, meta={'item': stock_market_item})
+
+            # Scrap revenue chart
+            # name = '-'.join([word for word in re.split(' |-', self.companies[row[0]]['name'].lower()) if word.isalnum()])
+            # revenue_uri = f"https://www.macrotrends.net/stocks/charts/{row[0]}/{name}/revenue"
+            # yield scrapy.Request(url=revenue_uri, callback=self.get_revenue_chart,
+            #                      meta={'item': stock_market_item})
+
+    def get_dividend(self, response):
+        item_loader = ItemLoader(item=response.request.meta['item'],
+                                 default_output_processor=TakeFirst(),
+                                 selector=response)
+        # Get 'Dividend (Amt)' field
+        item_loader.add_css(
+            'Dividend (Amt)',
+            'div.d-flex.stat-summary-wrapper.justify-content-center.align-items-center.text-center.align-content-center.flex-wrap.shadow.mb-3.dividend-wrapper.py-1:nth-child(2) dd.stat-summary-heading.mt-2'
+        )
+        item_loader.load_item()
+        # Scrap earnings
+        earnings_uri = self.companies[item_loader.item['Ticker']]['uri']
+        yield scrapy.Request(url=earnings_uri, callback=self.get_earnings,
+                             meta={'item': item_loader.item})
+
+    def get_earnings(self, response):
+        item_loader = ItemLoader(item=response.request.meta['item'],
+                                 default_output_processor=TakeFirst(),
+                                 selector=response)
+        # Get 'Nxt Earning dt' field
+        item_loader.add_css(
+            'Nxt Earning dt',
+            'div.mt-3.mb-1.p-1.gradient-green.c-white + dl div.price-data:nth-child(6) dd.m-0'
+        )
+        item_loader.load_item()
+        # Scrap revenue chart
+        name = '-'.join([word for word in re.split(' |-', self.companies[item_loader.item['Ticker']]['name'].lower()) if
+                         word.isalnum()])
+        revenue_uri = f"https://www.macrotrends.net/stocks/charts/{item_loader.item['Ticker']}/" \
+                      f"{name}/revenue"
+        yield scrapy.Request(url=revenue_uri, callback=self.get_revenue_chart,
+                             meta={'item': item_loader.item})
+
+    def get_revenue_chart(self, response):
+        item_loader = ItemLoader(item=response.request.meta['item'],
+                                 default_output_processor=TakeFirst(),
+                                 selector=response)
+        # Get 'MacroTrend Revenue Link' field
+        item_loader.add_value(
+            'MacroTrend Revenue Link',
+            response.url
+        )
+        # Get '12mo Rev Growth' field
+        # revenue_12_growth = response.css('div#main_content div:nth-child(2) li:nth-child(2)')
+        # if 'revenue for the twelve months' in revenue_12_growth.get():
+        #     item_loader.add_css('12mo Rev Growth', 'div#main_content div:nth-child(2) li:nth-child(2) strong')
+        item_loader.load_item()
+
+        # Scrap revenue data
+        revenue_chart_uri = response.css('iframe#chart_iframe::attr(src)').get()
+        yield scrapy.Request(url=revenue_chart_uri,
+                             callback=self.get_revenue_data,
+                             meta={'item': item_loader.item})
+
+
+    def get_revenue_data(self, response):
+        item_loader = ItemLoader(item=response.request.meta['item'],
+                                 default_output_processor=TakeFirst(),
+                                 selector=response)
+        data_javascript = response.css('body > script::text').get()
+        data = chompjs.parse_js_object(data_javascript)
+
+        # Get '12 mo Revenue' field
+        revenue_12_months = data[-1]['v1'] * 1000000000
+        item_loader.add_value('12 mo Revenue', revenue_12_months)
+
+        # Get '10yr Rev High / Low' and '10 Yr Rev High /Low  Dt' fields
+        revenue_10_year_high = revenue_10_year_low = revenue_12_months
+        revenue_10_year_high_date = revenue_10_year_low_date = data[-1]['date']
+        for data_piece in data[-40:]:
+            value = data_piece['v1'] * 1000000000
+            if value > revenue_10_year_high:
+                revenue_10_year_high = value
+                revenue_10_year_high_date = data_piece['date']
+            if value < revenue_10_year_low:
+                revenue_10_year_low = value
+                revenue_10_year_low_date = data_piece['date']
+        item_loader.add_value('10yr Rev High', revenue_10_year_high)
+        item_loader.add_value('10yr Rev Low', revenue_10_year_low)
+        item_loader.add_value('10 Yr Rev High Dt', revenue_10_year_high_date)
+        item_loader.add_value('10 Yr Rev Low Dt', revenue_10_year_low_date)
+
+        # Get '12mo Rev Growth' field
+        revenue_previous_12_months = data[-5]['v1'] * 1000000000
+        if revenue_12_months > revenue_previous_12_months:
+            revenue_12_growth = (revenue_12_months / revenue_previous_12_months - 1) * 100
+        else:
+            revenue_12_growth = (revenue_previous_12_months / revenue_12_months - 1) * -100
+
+        item_loader.add_value('12mo Rev Growth', revenue_12_growth)
+
+        yield item_loader.load_item()
+

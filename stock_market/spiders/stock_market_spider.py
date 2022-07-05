@@ -98,6 +98,18 @@ class StockMarketSpider(scrapy.Spider):
             'MacroTrend Revenue Link',
             response.url
         )
+        # Get 'MacroTrend Net Income Link' field
+        net_income_link = response.url.replace('revenue', 'net-income')
+        item_loader.add_value('MacroTrend Net Income Link', net_income_link)
+
+        # Get 'MacroTrend EPS Link' field
+        eps_link = response.url.replace('revenue', 'eps-earnings-per-share-diluted')
+        item_loader.add_value('MacroTrend EPS Link', eps_link)
+
+        # Get 'MacroTrend Mkt Cap Link' field
+        cap_link = response.url.replace('revenue', 'market-cap')
+        item_loader.add_value('MacroTrend Mkt Cap Link', cap_link)
+
         # Get '12mo Rev Growth' field
         # revenue_12_growth = response.css('div#main_content div:nth-child(2) li:nth-child(2)')
         # if 'revenue for the twelve months' in revenue_12_growth.get():
@@ -159,8 +171,61 @@ class StockMarketSpider(scrapy.Spider):
         item_loader.add_value('YoY Quarterly Rev Growth', revenue_yoy_quarterly_growth)
 
         # Get 'Q/Q Rev Growth' field
-        revenue_q_q_growth = data[-1]['v2'] / data[-2]['v2'] - 1
+        revenue_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 100
         item_loader.add_value('Q/Q Rev Growth', revenue_q_q_growth)
+
+        item_loader.load_item()
+
+        # Scrap net income data
+        net_income_chart_uri = f"https://www.macrotrends.net/assets/php/fundamental_iframe.php?t={item_loader.item['Ticker']}&type=net-income&statement=income-statement&freq=Q"
+
+        yield scrapy.Request(url=net_income_chart_uri,
+                             callback=self.get_net_income_data,
+                             meta={'item': item_loader.item})
+
+    def get_net_income_data(self, response):
+        item_loader = ItemLoader(item=response.request.meta['item'],
+                                 default_output_processor=TakeFirst(),
+                                 selector=response)
+        data_javascript = response.css('body > script::text').get()
+        data = chompjs.parse_js_object(data_javascript)
+
+        # Get '12 mo Net Income' field
+        net_income_12_months = data[-1]['v1'] * 1000000000
+        item_loader.add_value('12 mo Net Income', net_income_12_months)
+
+        # Get '10yr NI High / Low' and '10 Yr NI High /Low  Dt' fields
+        net_income_10_year_high = net_income_10_year_low = net_income_12_months
+        net_income_10_year_high_date = net_income_10_year_low_date = data[-1]['date']
+        for data_piece in data[-40:]:
+            value = data_piece['v1'] * 1000000000
+            if value > net_income_10_year_high:
+                net_income_10_year_high = value
+                net_income_10_year_high_date = data_piece['date']
+            if value < net_income_10_year_low:
+                net_income_10_year_low = value
+                net_income_10_year_low_date = data_piece['date']
+        item_loader.add_value('10yr NI High', net_income_10_year_high)
+        item_loader.add_value('10yr NI Low', net_income_10_year_low)
+        item_loader.add_value('10 Yr NI High Dt', net_income_10_year_high_date)
+        item_loader.add_value('10 Yr NI Low Dt', net_income_10_year_low_date)
+
+        # Get '12 mo NI Growth' field
+        net_income_previous_12_months = data[-5]['v1'] * 1000000000
+        if net_income_12_months > net_income_previous_12_months:
+            net_income_12_growth = (net_income_12_months / net_income_previous_12_months - 1) * 100
+        else:
+            net_income_12_growth = (net_income_previous_12_months / net_income_12_months - 1) * -100
+
+        item_loader.add_value('12 mo NI Growth', net_income_12_growth)
+
+        # Get 'YoY Quarterly NI Growth' field
+        net_income_yoy_quarterly_growth = data[-1]['v3']
+        item_loader.add_value('YoY Quarterly NI Growth', net_income_yoy_quarterly_growth)
+
+        # Get 'Q/Q NI Growth' field
+        net_income_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 100
+        item_loader.add_value('Q/Q NI Growth', net_income_q_q_growth)
 
 
         yield item_loader.load_item()

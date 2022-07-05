@@ -18,8 +18,11 @@ class StockMarketSpider(scrapy.Spider):
     #         'json': 'scrapy.exporters.JsonItemExporter',
              'xlsx': 'scrapy_xlsx.XlsxItemExporter',
          },
-        'FEEDS': {"stock.xlsx": {"format": "xlsx"},
-            "stock.csv": {"format": "csv"}, }
+        'FEEDS': {
+            "stock.xlsx": {"format": "xlsx"},
+            "stock.csv": {"format": "csv"},
+        },
+        'ITEM_PIPELINES': {'stock_market.pipelines.ScreenshotPipeline': 300}
     }
 
     def start_requests(self):
@@ -99,10 +102,17 @@ class StockMarketSpider(scrapy.Spider):
         # revenue_12_growth = response.css('div#main_content div:nth-child(2) li:nth-child(2)')
         # if 'revenue for the twelve months' in revenue_12_growth.get():
         #     item_loader.add_css('12mo Rev Growth', 'div#main_content div:nth-child(2) li:nth-child(2) strong')
-        item_loader.load_item()
+
 
         # Scrap revenue data
         revenue_chart_uri = response.css('iframe#chart_iframe::attr(src)').get()
+        item_loader.add_value(
+            'Revenue',
+            revenue_chart_uri
+        )
+        item_loader.load_item()
+
+
         yield scrapy.Request(url=revenue_chart_uri,
                              callback=self.get_revenue_data,
                              meta={'item': item_loader.item})
@@ -143,6 +153,15 @@ class StockMarketSpider(scrapy.Spider):
             revenue_12_growth = (revenue_previous_12_months / revenue_12_months - 1) * -100
 
         item_loader.add_value('12mo Rev Growth', revenue_12_growth)
+
+        # Get 'YoY Quarterly Rev Growth' field
+        revenue_yoy_quarterly_growth = data[-1]['v3']
+        item_loader.add_value('YoY Quarterly Rev Growth', revenue_yoy_quarterly_growth)
+
+        # Get 'Q/Q Rev Growth' field
+        revenue_q_q_growth = data[-1]['v2'] / data[-2]['v2'] - 1
+        item_loader.add_value('Q/Q Rev Growth', revenue_q_q_growth)
+
 
         yield item_loader.load_item()
 

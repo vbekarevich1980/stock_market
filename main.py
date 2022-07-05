@@ -1,3 +1,4 @@
+import os
 import time
 
 from twisted.internet import defer # reactor,
@@ -11,6 +12,9 @@ from stock_market.spiders.companies_spider import CompaniesSpider
 from scrapy.utils.reactor import install_reactor
 
 if __name__ == "__main__":
+
+    #os.system('docker run -d -p 8050:8050 --rm --name splash scrapinghub/splash')
+    #time.sleep(10)
 
     # configure_logging()
     # settings = get_project_settings()
@@ -48,3 +52,5 @@ if __name__ == "__main__":
     #process.crawl(CompaniesSpider)
     process.crawl(StockMarketSpider)
     process.start()
+
+    #os.system('docker stop splash')

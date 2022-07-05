@@ -6,6 +6,7 @@
 
 # useful for handling different item types with a single interface
 from itemadapter import ItemAdapter
+import os
 import json
 import hashlib
 from urllib.parse import quote
@@ -61,6 +62,21 @@ class ScreenshotPipeline:
                 f"https://www.macrotrends.net/assets/php/fundamental_iframe."
                 f"php?t={adapter['Ticker']}&type=eps-earnings-per-share-"
                 f"diluted&statement=income-statement&freq=Q",
+            "price_sales":
+                f"https://www.macrotrends.net/assets/php/fundamental_iframe."
+                f"php?t={adapter['Ticker']}&type=price-sales&statement=price-"
+                f"ratios&freq=Q",
+            "pe_ratio":
+                f"https://www.macrotrends.net/assets/php/fundamental_iframe."
+                f"php?t={adapter['Ticker']}&type=pe-ratio&statement=price-"
+                f"ratios&freq=Q",
+            "price_book":
+                f"https://www.macrotrends.net/assets/php/fundamental_iframe."
+                f"php?t={adapter['Ticker']}&type=price-book&statement=price-"
+                f"ratios&freq=Q",
+            "market_cap":
+                f"https://www.macrotrends.net/assets/php/market_cap."
+                f"php?t={adapter['Ticker']}",
         }
         for name, uri in charts.items():
             encoded_item_url = quote(uri)
@@ -77,7 +93,10 @@ class ScreenshotPipeline:
             # url = adapter["Revenue"]
             # url_hash = hashlib.md5(url.encode("utf8")).hexdigest()
             # filename = f"{url_hash}.png"
-            filename = f"{adapter['Ticker']}_{name}.png"
+            screenshot_dir = os.path.join(os.path.dirname(__file__), 'screenshots')
+            if not os.path.exists(screenshot_dir):
+                os.mkdir(screenshot_dir)
+            filename = os.path.join(screenshot_dir, f"{adapter['Ticker']}_{name}.png")
             with open(filename, "wb") as f:
                 f.write(response.body)
 

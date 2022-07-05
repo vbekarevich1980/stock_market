@@ -8,6 +8,7 @@ from scrapy.loader import ItemLoader
 from stock_market.items import StockMarketItem
 from itemloaders.processors import Join, MapCompose, TakeFirst
 import chompjs
+from datetime import datetime, timedelta
 
 
 class StockMarketSpider(scrapy.Spider):
@@ -281,6 +282,108 @@ class StockMarketSpider(scrapy.Spider):
         esp_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 100
         item_loader.add_value('Q/Q EPS Growth', esp_q_q_growth)
 
+        item_loader.load_item()
+
+        # Scrap price sales data
+        price_sales_chart_uri = f"https://www.macrotrends.net/assets/php/fundamental_iframe.php?t={item_loader.item['Ticker']}&type=price-sales&statement=price-ratios&freq=Q"
+
+        yield scrapy.Request(url=price_sales_chart_uri,
+                             callback=self.get_price_sales_data,
+                             meta={'item': item_loader.item})
+
+    def get_price_sales_data(self, response):
+        item_loader = ItemLoader(item=response.request.meta['item'],
+                                 default_output_processor=TakeFirst(),
+                                 selector=response)
+        data_javascript = response.css('body > script::text').get()
+        data = chompjs.parse_js_object(data_javascript)
+
+        # Get '10 Yr High / Low P/S' fields
+        price_sales_10_year_high = price_sales_10_year_low = data[-40]['v3']
+        for data_piece in data[-40:]:
+            value = data_piece['v3']
+            if value >= price_sales_10_year_high:
+                price_sales_10_year_high = value
+            if value <= price_sales_10_year_low:
+                price_sales_10_year_low = value
+        item_loader.add_value('10 Yr High P/S', price_sales_10_year_high)
+        item_loader.add_value('10 Yr Low P/S', price_sales_10_year_low)
+
+        item_loader.load_item()
+
+        # Scrap pe ratio data
+        pe_ratio_chart_uri = f"https://www.macrotrends.net/assets/php/fundamental_iframe.php?t={item_loader.item['Ticker']}&type=pe-ratio&statement=price-ratios&freq=Q"
+
+        yield scrapy.Request(url=pe_ratio_chart_uri,
+                             callback=self.get_pe_ratio_data,
+                             meta={'item': item_loader.item})
+
+    def get_pe_ratio_data(self, response):
+        item_loader = ItemLoader(item=response.request.meta['item'],
+                                 default_output_processor=TakeFirst(),
+                                 selector=response)
+        data_javascript = response.css('body > script::text').get()
+        data = chompjs.parse_js_object(data_javascript)
+
+        # Get '10 Yr High / Low P/E' fields
+        pe_ratio_10_year_high = pe_ratio_10_year_low = data[-40]['v3']
+        for data_piece in data[-40:]:
+            value = data_piece['v3']
+            if value >= pe_ratio_10_year_high:
+                pe_ratio_10_year_high = value
+            if value <= pe_ratio_10_year_low:
+                pe_ratio_10_year_low = value
+        item_loader.add_value('10 Yr High P/E', pe_ratio_10_year_high)
+        item_loader.add_value('10 Yr Low P/E', pe_ratio_10_year_low)
+
+        item_loader.load_item()
+
+        # Scrap market cap data
+        market_cap_chart_uri = f"https://www.macrotrends.net/assets/php/market_cap.php?t={item_loader.item['Ticker']}"
+
+        yield scrapy.Request(url=market_cap_chart_uri,
+                             callback=self.get_market_cap_data,
+                             meta={'item': item_loader.item})
+
+    def get_market_cap_data(self, response):
+        item_loader = ItemLoader(item=response.request.meta['item'],
+                                 default_output_processor=TakeFirst(),
+                                 selector=response)
+        data_javascript = response.css('body > script::text').get()
+        data = chompjs.parse_js_object(data_javascript)
+
+        latest_chart_date = data[-1]['date']
+        latest_chart_date_time_obj = datetime.strptime(latest_chart_date,
+                                                       '%Y-%m-%d')
+        # Get '10yr Mkt Cap High / Low' and '10 Yr High / Low  Dt' fields
+        market_cap_10_year_high = 0
+
+        i = 0
+        for data_piece in data:
+            chart_date = data_piece['date']
+            chart_date_time_obj = datetime.strptime(chart_date, '%Y-%m-%d')
+
+            if (latest_chart_date_time_obj - chart_date_time_obj > timedelta(
+                    days=10 * 365)):
+                i += 1
+                continue
+            else:
+                market_cap_10_year_high = market_cap_10_year_low = data_piece['v1'] * 1000000000
+                market_cap_10_year_high_date = market_cap_10_year_low_date = data_piece['date']
+                i += 1
+                break
+
+        for data_piece in data[i:]:
+            value = data_piece['v1'] * 1000000000
+            if value >= market_cap_10_year_high:
+                market_cap_10_year_high = value
+                market_cap_10_year_high_date = data_piece['date']
+            if value <= market_cap_10_year_low:
+                market_cap_10_year_low = value
+                market_cap_10_year_low_date = data_piece['date']
+        item_loader.add_value('10yr Mkt Cap High', market_cap_10_year_high)
+        item_loader.add_value('10yr Mkt Cap Low', market_cap_10_year_low)
+        item_loader.add_value('10Yr High Dt', market_cap_10_year_high_date)
+        item_loader.add_value('10Yr Low Dt', market_cap_10_year_low_date)
 
         yield item_loader.load_item()
-

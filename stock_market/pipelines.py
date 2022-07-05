@@ -53,6 +53,10 @@ class ScreenshotPipeline:
                 f"https://www.macrotrends.net/assets/php/fundamental_iframe."
                 f"php?t={adapter['Ticker']}&type=revenue&statement=income-"
                 f"statement&freq=Q",
+            "net_income":
+                f"https://www.macrotrends.net/assets/php/fundamental_iframe."
+                f"php?t={adapter['Ticker']}&type=net-income&statement=income-"
+                f"statement&freq=Q",
         }
         for name, uri in charts.items():
             encoded_item_url = quote(uri)

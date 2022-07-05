@@ -146,10 +146,10 @@ class StockMarketSpider(scrapy.Spider):
         revenue_10_year_high_date = revenue_10_year_low_date = data[-1]['date']
         for data_piece in data[-40:]:
             value = data_piece['v1'] * 1000000000
-            if value > revenue_10_year_high:
+            if value >= revenue_10_year_high:
                 revenue_10_year_high = value
                 revenue_10_year_high_date = data_piece['date']
-            if value < revenue_10_year_low:
+            if value <= revenue_10_year_low:
                 revenue_10_year_low = value
                 revenue_10_year_low_date = data_piece['date']
         item_loader.add_value('10yr Rev High', revenue_10_year_high)
@@ -199,10 +199,10 @@ class StockMarketSpider(scrapy.Spider):
         net_income_10_year_high_date = net_income_10_year_low_date = data[-1]['date']
         for data_piece in data[-40:]:
             value = data_piece['v1'] * 1000000000
-            if value > net_income_10_year_high:
+            if value >= net_income_10_year_high:
                 net_income_10_year_high = value
                 net_income_10_year_high_date = data_piece['date']
-            if value < net_income_10_year_low:
+            if value <= net_income_10_year_low:
                 net_income_10_year_low = value
                 net_income_10_year_low_date = data_piece['date']
         item_loader.add_value('10yr NI High', net_income_10_year_high)
@@ -226,6 +226,60 @@ class StockMarketSpider(scrapy.Spider):
         # Get 'Q/Q NI Growth' field
         net_income_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 100
         item_loader.add_value('Q/Q NI Growth', net_income_q_q_growth)
+
+        item_loader.load_item()
+
+        # Scrap eps data
+        esp_chart_uri = f"https://www.macrotrends.net/assets/php/fundamental_iframe.php?t={item_loader.item['Ticker']}&type=eps-earnings-per-share-diluted&statement=income-statement&freq=Q"
+
+        yield scrapy.Request(url=esp_chart_uri,
+                             callback=self.get_eps_data,
+                             meta={'item': item_loader.item})
+
+
+    def get_eps_data(self, response):
+        item_loader = ItemLoader(item=response.request.meta['item'],
+                                 default_output_processor=TakeFirst(),
+                                 selector=response)
+        data_javascript = response.css('body > script::text').get()
+        data = chompjs.parse_js_object(data_javascript)
+
+        # Get '12 mo EPS' field
+        esp_12_months = data[-1]['v1']
+        item_loader.add_value('12 mo EPS', esp_12_months)
+
+        # Get '10yr EPS High / Low' and '10 Yr EPS High /Low  Dt' fields
+        esp_10_year_high = esp_10_year_low = esp_12_months
+        esp_10_year_high_date = esp_10_year_low_date = data[-1]['date']
+        for data_piece in data[-40:]:
+            value = data_piece['v1']
+            if value >= esp_10_year_high:
+                esp_10_year_high = value
+                esp_10_year_high_date = data_piece['date']
+            if value <= esp_10_year_low:
+                esp_10_year_low = value
+                esp_10_year_low_date = data_piece['date']
+        item_loader.add_value('10yr EPS High', esp_10_year_high)
+        item_loader.add_value('10yr EPS Low', esp_10_year_low)
+        item_loader.add_value('10 Yr EPS High Dt', esp_10_year_high_date)
+        item_loader.add_value('10 Yr EPS Low Dt', esp_10_year_low_date)
+
+        # Get '12 mo EPS Growth' field
+        esp_previous_12_months = data[-5]['v1']
+        if esp_12_months > esp_previous_12_months:
+            esp_12_growth = (esp_12_months / esp_previous_12_months - 1) * 100
+        else:
+            esp_12_growth = (esp_previous_12_months / esp_12_months - 1) * -100
+
+        item_loader.add_value('12 mo EPS Growth', esp_12_growth)
+
+        # Get 'YoY Quarterly EPS Growth' field
+        esp_yoy_quarterly_growth = data[-1]['v3']
+        item_loader.add_value('YoY Quarterly EPS Growth', esp_yoy_quarterly_growth)
+
+        # Get 'Q/Q EPS Growth' field
+        esp_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 100
+        item_loader.add_value('Q/Q EPS Growth', esp_q_q_growth)
 
 
         yield item_loader.load_item()

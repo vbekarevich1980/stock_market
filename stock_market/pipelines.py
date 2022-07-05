@@ -57,11 +57,15 @@ class ScreenshotPipeline:
                 f"https://www.macrotrends.net/assets/php/fundamental_iframe."
                 f"php?t={adapter['Ticker']}&type=net-income&statement=income-"
                 f"statement&freq=Q",
+            "esp":
+                f"https://www.macrotrends.net/assets/php/fundamental_iframe."
+                f"php?t={adapter['Ticker']}&type=eps-earnings-per-share-"
+                f"diluted&statement=income-statement&freq=Q",
         }
         for name, uri in charts.items():
             encoded_item_url = quote(uri)
             screenshot_url = self.SPLASH_URL.format(encoded_item_url)
-            print(screenshot_url)
+            #print(screenshot_url)
             request = scrapy.Request(screenshot_url)
             response = await maybe_deferred_to_future(spider.crawler.engine.download(request, spider))
 

@@ -47,10 +47,22 @@ class StockMarketItem(scrapy.Item):
         self.fields['Q/Q NI Growth'] = scrapy.Field(
             output_processor=TakeFirst())
         self.fields['MacroTrend EPS Link'] = scrapy.Field(output_processor=TakeFirst())
-
-
-
-
+        self.fields['12 mo EPS'] = scrapy.Field(
+            output_processor=TakeFirst())
+        self.fields['10yr EPS High'] = scrapy.Field(
+            output_processor=TakeFirst())
+        self.fields['10yr EPS Low'] = scrapy.Field(
+            output_processor=TakeFirst())
+        self.fields['10 Yr EPS High Dt'] = scrapy.Field(
+            output_processor=TakeFirst())
+        self.fields['10 Yr EPS Low Dt'] = scrapy.Field(
+            output_processor=TakeFirst())
+        self.fields['12 mo EPS Growth'] = scrapy.Field(
+            output_processor=TakeFirst())
+        self.fields['YoY Quarterly EPS Growth'] = scrapy.Field(
+            output_processor=TakeFirst())
+        self.fields['Q/Q EPS Growth'] = scrapy.Field(
+            output_processor=TakeFirst())
         self.fields['MacroTrend Mkt Cap Link'] = scrapy.Field(output_processor=TakeFirst())
 
 

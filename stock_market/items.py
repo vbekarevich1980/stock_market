@@ -14,13 +14,15 @@ class StockMarketItem(scrapy.Item):
     def __init__(self):
         super().__init__()
         self.fields['Ticker'] = scrapy.Field(output_processor=TakeFirst())
+
         self.fields['Dividend (Amt)'] = scrapy.Field(
             input_processor=MapCompose(remove_tags),
             output_processor=TakeFirst())
         self.fields['Nxt Earning dt'] = scrapy.Field(
             input_processor=MapCompose(remove_tags),
             output_processor=TakeFirst())
-        self.fields['MacroTrend Revenue Link'] = scrapy.Field()
+
+        self.fields['MacroTrend Revenue Link'] = scrapy.Field(output_processor=TakeFirst())
         self.fields['12 mo Revenue'] = scrapy.Field(output_processor=TakeFirst())
         self.fields['10yr Rev High'] = scrapy.Field(output_processor=TakeFirst())
         self.fields['10yr Rev Low'] = scrapy.Field(output_processor=TakeFirst())
@@ -29,6 +31,7 @@ class StockMarketItem(scrapy.Item):
         self.fields['12mo Rev Growth'] = scrapy.Field(output_processor=TakeFirst())
         self.fields['YoY Quarterly Rev Growth'] = scrapy.Field(output_processor=TakeFirst())
         self.fields['Q/Q Rev Growth'] = scrapy.Field(output_processor=TakeFirst())
+
         self.fields['MacroTrend Net Income Link'] = scrapy.Field(output_processor=TakeFirst())
         self.fields['12 mo Net Income'] = scrapy.Field(
             output_processor=TakeFirst())
@@ -46,6 +49,7 @@ class StockMarketItem(scrapy.Item):
             output_processor=TakeFirst())
         self.fields['Q/Q NI Growth'] = scrapy.Field(
             output_processor=TakeFirst())
+
         self.fields['MacroTrend EPS Link'] = scrapy.Field(output_processor=TakeFirst())
         self.fields['12 mo EPS'] = scrapy.Field(
             output_processor=TakeFirst())
@@ -63,37 +67,26 @@ class StockMarketItem(scrapy.Item):
             output_processor=TakeFirst())
         self.fields['Q/Q EPS Growth'] = scrapy.Field(
             output_processor=TakeFirst())
-        self.fields['MacroTrend Mkt Cap Link'] = scrapy.Field(output_processor=TakeFirst())
 
+        self.fields['10 Yr High P/S'] = scrapy.Field(
+            output_processor=TakeFirst())
+        self.fields['10 Yr Low P/S'] = scrapy.Field(
+            output_processor=TakeFirst())
+        self.fields['10 Yr High P/E'] = scrapy.Field(
+            output_processor=TakeFirst())
+        self.fields['10 Yr Low P/E'] = scrapy.Field(
+            output_processor=TakeFirst())
 
-
+        self.fields['MacroTrend Mkt Cap Link'] = scrapy.Field(
+            output_processor=TakeFirst())
+        self.fields['10yr Mkt Cap High'] = scrapy.Field(
+            output_processor=TakeFirst())
+        self.fields['10yr Mkt Cap Low'] = scrapy.Field(
+            output_processor=TakeFirst())
+        self.fields['10Yr High Dt'] = scrapy.Field(
+            output_processor=TakeFirst())
+        self.fields['10Yr Low Dt'] = scrapy.Field(
+            output_processor=TakeFirst())
 
         self.fields['Revenue'] = scrapy.Field(output_processor=TakeFirst())
 
-        # self.fields['SKU'] = scrapy.Field(
-        #     input_processor=MapCompose(remove_tags),
-        #     output_processor=TakeFirst())
-        # self.fields['Category'] = scrapy.Field(
-        #     input_processor=MapCompose(remove_tags, lambda x: x.strip()),
-        #     output_processor=TakeFirst())
-        # self.fields['Subcategory'] = scrapy.Field(
-        #     input_processor=MapCompose(remove_tags),
-        #     output_processor=TakeFirst())
-        # self.fields['Short Description'] = scrapy.Field(
-        #     input_processor=MapCompose(remove_tags), output_processor=Join(
-        #         ' '))  # Need to fix to have whitespaces and remove
-        # # 'Description' word
-        # self.fields['Long Description'] = scrapy.Field(
-        #     input_processor=MapCompose(remove_tags,
-        #                                lambda x: ': '.join(x.split(':'))),
-        #     output_processor=Join(', '))
-        # self.fields['Featured Image URL'] = scrapy.Field(
-        #     output_processor=TakeFirst()
-        #
-        #     )
-        # self.fields['Images URLs'] = scrapy.Field(output_processor=Join(', ')
-        #
-        #                                           )
-        # self.fields['Product URL'] = scrapy.Field(
-        #     input_processor=MapCompose(remove_tags),
-        #     output_processor=TakeFirst())

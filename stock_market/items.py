@@ -27,6 +27,13 @@ class StockMarketItem(scrapy.Item):
         self.fields['10 Yr Rev High Dt'] = scrapy.Field(output_processor=TakeFirst())
         self.fields['10 Yr Rev Low Dt'] = scrapy.Field(output_processor=TakeFirst())
         self.fields['12mo Rev Growth'] = scrapy.Field(output_processor=TakeFirst())
+        self.fields['YoY Quarterly Rev Growth'] = scrapy.Field(output_processor=TakeFirst())
+        self.fields['Q/Q Rev Growth'] = scrapy.Field(output_processor=TakeFirst())
+
+
+
+
+        self.fields['Revenue'] = scrapy.Field(output_processor=TakeFirst())
 
         # self.fields['SKU'] = scrapy.Field(
         #     input_processor=MapCompose(remove_tags),

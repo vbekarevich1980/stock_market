@@ -6,6 +6,7 @@
 import scrapy
 from itemloaders.processors import Join, MapCompose, TakeFirst, Compose
 from w3lib.html import remove_tags
+import datetime
 
 
 class StockMarketItem(scrapy.Item):
@@ -16,18 +17,30 @@ class StockMarketItem(scrapy.Item):
         self.fields['Ticker'] = scrapy.Field(output_processor=TakeFirst())
 
         self.fields['Dividend (Amt)'] = scrapy.Field(
-            input_processor=MapCompose(remove_tags),
+            input_processor=MapCompose(remove_tags, lambda x: float(x.strip('$'))),
             output_processor=TakeFirst())
         self.fields['Nxt Earning dt'] = scrapy.Field(
-            input_processor=MapCompose(remove_tags),
+            input_processor=MapCompose(remove_tags, lambda x: datetime.datetime.strptime(x, '%m/%d/%Y').strftime('%d.%m.%Y')),
             output_processor=TakeFirst())
 
         self.fields['MacroTrend Revenue Link'] = scrapy.Field(output_processor=TakeFirst())
         self.fields['12 mo Revenue'] = scrapy.Field(output_processor=TakeFirst())
         self.fields['10yr Rev High'] = scrapy.Field(output_processor=TakeFirst())
         self.fields['10yr Rev Low'] = scrapy.Field(output_processor=TakeFirst())
-        self.fields['10 Yr Rev High Dt'] = scrapy.Field(output_processor=TakeFirst())
-        self.fields['10 Yr Rev Low Dt'] = scrapy.Field(output_processor=TakeFirst())
+        self.fields['10 Yr Rev High Dt'] = scrapy.Field(
+            input_processor=MapCompose(
+                lambda x:
+                datetime.datetime.strptime(x, '%Y-%m-%d').strftime('%d.%m.%Y')
+            ),
+            output_processor=TakeFirst()
+        )
+        self.fields['10 Yr Rev Low Dt'] = scrapy.Field(
+            input_processor=MapCompose(
+                lambda x:
+                datetime.datetime.strptime(x, '%Y-%m-%d').strftime('%d.%m.%Y')
+            ),
+            output_processor=TakeFirst()
+        )
         self.fields['12mo Rev Growth'] = scrapy.Field(output_processor=TakeFirst())
         self.fields['YoY Quarterly Rev Growth'] = scrapy.Field(output_processor=TakeFirst())
         self.fields['Q/Q Rev Growth'] = scrapy.Field(output_processor=TakeFirst())
@@ -40,9 +53,19 @@ class StockMarketItem(scrapy.Item):
         self.fields['10yr NI Low'] = scrapy.Field(
             output_processor=TakeFirst())
         self.fields['10 Yr NI High Dt'] = scrapy.Field(
-            output_processor=TakeFirst())
+            input_processor=MapCompose(
+                lambda x:
+                datetime.datetime.strptime(x, '%Y-%m-%d').strftime('%d.%m.%Y')
+            ),
+            output_processor=TakeFirst()
+        )
         self.fields['10 Yr NI Low Dt'] = scrapy.Field(
-            output_processor=TakeFirst())
+            input_processor=MapCompose(
+                lambda x:
+                datetime.datetime.strptime(x, '%Y-%m-%d').strftime('%d.%m.%Y')
+            ),
+            output_processor=TakeFirst()
+        )
         self.fields['12 mo NI Growth'] = scrapy.Field(
             output_processor=TakeFirst())
         self.fields['YoY Quarterly NI Growth'] = scrapy.Field(
@@ -58,9 +81,19 @@ class StockMarketItem(scrapy.Item):
         self.fields['10yr EPS Low'] = scrapy.Field(
             output_processor=TakeFirst())
         self.fields['10 Yr EPS High Dt'] = scrapy.Field(
-            output_processor=TakeFirst())
+            input_processor=MapCompose(
+                lambda x:
+                datetime.datetime.strptime(x, '%Y-%m-%d').strftime('%d.%m.%Y')
+            ),
+            output_processor=TakeFirst()
+        )
         self.fields['10 Yr EPS Low Dt'] = scrapy.Field(
-            output_processor=TakeFirst())
+            input_processor=MapCompose(
+                lambda x:
+                datetime.datetime.strptime(x, '%Y-%m-%d').strftime('%d.%m.%Y')
+            ),
+            output_processor=TakeFirst()
+        )
         self.fields['12 mo EPS Growth'] = scrapy.Field(
             output_processor=TakeFirst())
         self.fields['YoY Quarterly EPS Growth'] = scrapy.Field(
@@ -84,9 +117,19 @@ class StockMarketItem(scrapy.Item):
         self.fields['10yr Mkt Cap Low'] = scrapy.Field(
             output_processor=TakeFirst())
         self.fields['10Yr High Dt'] = scrapy.Field(
-            output_processor=TakeFirst())
+            input_processor=MapCompose(
+                lambda x:
+                datetime.datetime.strptime(x, '%Y-%m-%d').strftime('%d.%m.%Y')
+            ),
+            output_processor=TakeFirst()
+        )
         self.fields['10Yr Low Dt'] = scrapy.Field(
-            output_processor=TakeFirst())
+            input_processor=MapCompose(
+                lambda x:
+                datetime.datetime.strptime(x, '%Y-%m-%d').strftime('%d.%m.%Y')
+            ),
+            output_processor=TakeFirst()
+        )
 
-        self.fields['Revenue'] = scrapy.Field(output_processor=TakeFirst())
+        # self.fields['Revenue'] = scrapy.Field(output_processor=TakeFirst())
 

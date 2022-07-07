@@ -38,7 +38,9 @@ class StockMarketSpider(scrapy.Spider):
         wb_obj = openpyxl.load_workbook(xlsx_file)
         sheet = wb_obj.active
 
-        for row in sheet.iter_rows(min_row=2, max_row=5, max_col=1, values_only=True):
+        for row in sheet.iter_rows(min_row=2, max_col=1, values_only=True):
+            if row[0] is None:
+                break
             # Create an item
             stock_market_item = StockMarketItem()
             # Get 'Ticker' field
@@ -47,15 +49,7 @@ class StockMarketSpider(scrapy.Spider):
             dividend_uri = self.companies[row[0]]['uri'] + 'dividend/'
             yield scrapy.Request(url=dividend_uri, callback=self.get_dividend,
                                  meta={'item': stock_market_item})
-            # Scrap earnings
-            # earnings_uri = self.companies[row[0]]['uri']
-            # yield scrapy.Request(url=earnings_uri, callback=self.get_earnings, meta={'item': stock_market_item})
 
-            # Scrap revenue chart
-            # name = '-'.join([word for word in re.split(' |-', self.companies[row[0]]['name'].lower()) if word.isalnum()])
-            # revenue_uri = f"https://www.macrotrends.net/stocks/charts/{row[0]}/{name}/revenue"
-            # yield scrapy.Request(url=revenue_uri, callback=self.get_revenue_chart,
-            #                      meta={'item': stock_market_item})
 
     def get_dividend(self, response):
         item_loader = ItemLoader(item=response.request.meta['item'],
@@ -116,15 +110,19 @@ class StockMarketSpider(scrapy.Spider):
         # if 'revenue for the twelve months' in revenue_12_growth.get():
         #     item_loader.add_css('12mo Rev Growth', 'div#main_content div:nth-child(2) li:nth-child(2) strong')
 
-
         # Scrap revenue data
-        revenue_chart_uri = response.css('iframe#chart_iframe::attr(src)').get()
-        item_loader.add_value(
-            'Revenue',
-            revenue_chart_uri
-        )
+        # revenue_chart_uri = response.css('iframe#chart_iframe::attr(src)').get()
+        # item_loader.add_value(
+        #     'Revenue',
+        #     revenue_chart_uri
+        # )
         item_loader.load_item()
 
+        # Scrap revenue data
+        revenue_chart_uri = f"https://www.macrotrends.net/assets/php/" \
+                            f"fundamental_iframe.php?t=" \
+                            f"{item_loader.item['Ticker']}&type=revenue&" \
+                            f"statement=income-statement&freq=Q"
 
         yield scrapy.Request(url=revenue_chart_uri,
                              callback=self.get_revenue_data,
@@ -161,18 +159,18 @@ class StockMarketSpider(scrapy.Spider):
         # Get '12mo Rev Growth' field
         revenue_previous_12_months = data[-5]['v1'] * 1000000000
         if revenue_12_months > revenue_previous_12_months:
-            revenue_12_growth = (revenue_12_months / revenue_previous_12_months - 1) * 100
+            revenue_12_growth = (revenue_12_months / revenue_previous_12_months - 1) * 1
         else:
-            revenue_12_growth = (revenue_previous_12_months / revenue_12_months - 1) * -100
+            revenue_12_growth = (revenue_previous_12_months / revenue_12_months - 1) * -1
 
         item_loader.add_value('12mo Rev Growth', revenue_12_growth)
 
         # Get 'YoY Quarterly Rev Growth' field
-        revenue_yoy_quarterly_growth = data[-1]['v3']
+        revenue_yoy_quarterly_growth = data[-1]['v3']/100
         item_loader.add_value('YoY Quarterly Rev Growth', revenue_yoy_quarterly_growth)
 
         # Get 'Q/Q Rev Growth' field
-        revenue_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 100
+        revenue_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 1
         item_loader.add_value('Q/Q Rev Growth', revenue_q_q_growth)
 
         item_loader.load_item()
@@ -214,18 +212,18 @@ class StockMarketSpider(scrapy.Spider):
         # Get '12 mo NI Growth' field
         net_income_previous_12_months = data[-5]['v1'] * 1000000000
         if net_income_12_months > net_income_previous_12_months:
-            net_income_12_growth = (net_income_12_months / net_income_previous_12_months - 1) * 100
+            net_income_12_growth = (net_income_12_months / net_income_previous_12_months - 1) * 1
         else:
-            net_income_12_growth = (net_income_previous_12_months / net_income_12_months - 1) * -100
+            net_income_12_growth = (net_income_previous_12_months / net_income_12_months - 1) * -1
 
         item_loader.add_value('12 mo NI Growth', net_income_12_growth)
 
         # Get 'YoY Quarterly NI Growth' field
-        net_income_yoy_quarterly_growth = data[-1]['v3']
+        net_income_yoy_quarterly_growth = data[-1]['v3']/100
         item_loader.add_value('YoY Quarterly NI Growth', net_income_yoy_quarterly_growth)
 
         # Get 'Q/Q NI Growth' field
-        net_income_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 100
+        net_income_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 1
         item_loader.add_value('Q/Q NI Growth', net_income_q_q_growth)
 
         item_loader.load_item()
@@ -268,18 +266,18 @@ class StockMarketSpider(scrapy.Spider):
         # Get '12 mo EPS Growth' field
         esp_previous_12_months = data[-5]['v1']
         if esp_12_months > esp_previous_12_months:
-            esp_12_growth = (esp_12_months / esp_previous_12_months - 1) * 100
+            esp_12_growth = (esp_12_months / esp_previous_12_months - 1) * 1
         else:
-            esp_12_growth = (esp_previous_12_months / esp_12_months - 1) * -100
+            esp_12_growth = (esp_previous_12_months / esp_12_months - 1) * -1
 
         item_loader.add_value('12 mo EPS Growth', esp_12_growth)
 
         # Get 'YoY Quarterly EPS Growth' field
-        esp_yoy_quarterly_growth = data[-1]['v3']
+        esp_yoy_quarterly_growth = data[-1]['v3']/100
         item_loader.add_value('YoY Quarterly EPS Growth', esp_yoy_quarterly_growth)
 
         # Get 'Q/Q EPS Growth' field
-        esp_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 100
+        esp_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 1
         item_loader.add_value('Q/Q EPS Growth', esp_q_q_growth)
 
         item_loader.load_item()

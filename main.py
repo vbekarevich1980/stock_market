@@ -19,9 +19,9 @@ from scrapy.utils.reactor import install_reactor
 if __name__ == "__main__":
 
     #os.system('docker pull scrapinghub/splash')
-    # time.sleep(10)
-    #os.system('docker run -d -p 8050:8050 --rm --name splash scrapinghub/splash')
     #time.sleep(10)
+    os.system('docker run -d -p 8050:8050 --rm --name splash scrapinghub/splash')
+    time.sleep(10)
 
     configure_logging()
     settings = get_project_settings()
@@ -75,4 +75,4 @@ if __name__ == "__main__":
     destination_wb_obj.save(f'Stock Market {datetime.datetime.today()}.xlsx')
     destination_wb_obj.close()
 
-    #os.system('docker stop splash')
+    os.system('docker stop splash')

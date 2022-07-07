@@ -130,6 +130,3 @@ class StockMarketItem(scrapy.Item):
             ),
             output_processor=TakeFirst()
         )
-
-        # self.fields['Revenue'] = scrapy.Field(output_processor=TakeFirst())
-

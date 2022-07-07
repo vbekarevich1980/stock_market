@@ -110,12 +110,6 @@ class StockMarketSpider(scrapy.Spider):
         # if 'revenue for the twelve months' in revenue_12_growth.get():
         #     item_loader.add_css('12mo Rev Growth', 'div#main_content div:nth-child(2) li:nth-child(2) strong')
 
-        # Scrap revenue data
-        # revenue_chart_uri = response.css('iframe#chart_iframe::attr(src)').get()
-        # item_loader.add_value(
-        #     'Revenue',
-        #     revenue_chart_uri
-        # )
         item_loader.load_item()
 
         # Scrap revenue data

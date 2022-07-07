@@ -8,12 +8,12 @@
 from itemadapter import ItemAdapter
 import os
 import json
-import hashlib
 from urllib.parse import quote
 
 import scrapy
 from itemadapter import ItemAdapter
 from scrapy.utils.defer import maybe_deferred_to_future
+
 
 class StockMarketPipeline:
 
@@ -27,8 +27,6 @@ class StockMarketPipeline:
         if spider.name == 'companies':
             with open('companies.json', 'w') as file:
                 file.write(json.dumps(self.tickers))
-            # self.file.write('}')
-            # self.file.close()
 
     def process_item(self, item, spider):
         if spider.name == 'companies':
@@ -81,7 +79,6 @@ class ScreenshotPipeline:
         for name, uri in charts.items():
             encoded_item_url = quote(uri)
             screenshot_url = self.SPLASH_URL.format(encoded_item_url)
-            #print(screenshot_url)
             request = scrapy.Request(screenshot_url)
             response = await maybe_deferred_to_future(spider.crawler.engine.download(request, spider))
 
@@ -89,10 +86,7 @@ class ScreenshotPipeline:
                 # Error happened, return item.
                 continue
 
-            # Save screenshot to file, filename will be hash of url.
-            # url = adapter["Revenue"]
-            # url_hash = hashlib.md5(url.encode("utf8")).hexdigest()
-            # filename = f"{url_hash}.png"
+            # Save screenshot to file
             screenshot_dir = os.path.join(os.path.dirname(__file__), 'screenshots')
             if not os.path.exists(screenshot_dir):
                 os.mkdir(screenshot_dir)
@@ -100,6 +94,4 @@ class ScreenshotPipeline:
             with open(filename, "wb") as f:
                 f.write(response.body)
 
-        # Store filename in item.
-        #adapter["screenshot_filename"] = filename
         return item

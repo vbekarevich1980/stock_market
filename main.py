@@ -18,20 +18,10 @@ from scrapy.utils.reactor import install_reactor
 
 if __name__ == "__main__":
 
+    #os.system('docker pull scrapinghub/splash')
+    # time.sleep(10)
     #os.system('docker run -d -p 8050:8050 --rm --name splash scrapinghub/splash')
     #time.sleep(10)
-
-    # configure_logging()
-    # settings = get_project_settings()
-    # runner = CrawlerRunner(settings=settings)
-    # runner.crawl(ProxySpider)
-    # runner.crawl(BroswaySpider)
-    # d = runner.join()
-    # d.addBoth(lambda _: reactor.stop())
-    #
-    # reactor.run()  # the script will block here until all crawling jobs are
-
-
 
     configure_logging()
     settings = get_project_settings()
@@ -41,15 +31,10 @@ if __name__ == "__main__":
     # def crawl():
     #     yield runner.crawl(ProxySpider)
     #     #yield runner.crawl(BroswaySpider)
-    #     #yield runner.crawl(TedoraSpider)
-    #     #yield runner.crawl(BreuningSpider)
-    #     yield runner.crawl(BoccadamoSpider)
     #     reactor.stop()
     #
     # crawl()
     # reactor.run()
-
-
 
 
     install_reactor('twisted.internet.asyncioreactor.AsyncioSelectorReactor')
@@ -87,15 +72,7 @@ if __name__ == "__main__":
             img.height = 357
             destination_sheet.add_image(img, f'{column_id}{src_row[0].row}')
 
-
-
     destination_wb_obj.save(f'Stock Market {datetime.datetime.today()}.xlsx')
     destination_wb_obj.close()
-
-
-
-
-
-
 
     #os.system('docker stop splash')

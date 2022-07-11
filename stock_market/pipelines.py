@@ -43,7 +43,7 @@ class ScreenshotPipeline:
     """Pipeline that uses Splash to render screenshot of
     every Scrapy item."""
 
-    SPLASH_URL = "http://localhost:8050/render.png?url={}"
+    SPLASH_URL = "http://localhost:8050/render.png?url={}&wait=0.5"
 
     async def process_item(self, item, spider):
         adapter = ItemAdapter(item)

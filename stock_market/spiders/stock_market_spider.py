@@ -16,7 +16,6 @@ class StockMarketSpider(scrapy.Spider):
     companies = []
     custom_settings = {
          'FEED_EXPORTERS': {
-    #         'json': 'scrapy.exporters.JsonItemExporter',
              'xlsx': 'scrapy_xlsx.XlsxItemExporter',
          },
         'FEEDS': {
@@ -82,7 +81,9 @@ class StockMarketSpider(scrapy.Spider):
         revenue_uri = f"https://www.macrotrends.net/stocks/charts/{item_loader.item['Ticker']}/" \
                       f"{name}/revenue"
         yield scrapy.Request(url=revenue_uri, callback=self.get_revenue_chart,
-                             meta={'item': item_loader.item})
+                             meta={'item': item_loader.item,
+                                   "zyte_api": {"browserHtml": True,
+                                                "httpResponseBody": False, }})
 
     def get_revenue_chart(self, response):
         item_loader = ItemLoader(item=response.request.meta['item'],
@@ -120,7 +121,9 @@ class StockMarketSpider(scrapy.Spider):
 
         yield scrapy.Request(url=revenue_chart_uri,
                              callback=self.get_revenue_data,
-                             meta={'item': item_loader.item})
+                             meta={'item': item_loader.item,
+                                   "zyte_api": {"browserHtml": True,
+                                                "httpResponseBody": False, }})
 
 
     def get_revenue_data(self, response):
@@ -174,7 +177,9 @@ class StockMarketSpider(scrapy.Spider):
 
         yield scrapy.Request(url=net_income_chart_uri,
                              callback=self.get_net_income_data,
-                             meta={'item': item_loader.item})
+                             meta={'item': item_loader.item,
+                                   "zyte_api": {"browserHtml": True,
+                                                "httpResponseBody": False, }})
 
     def get_net_income_data(self, response):
         item_loader = ItemLoader(item=response.request.meta['item'],
@@ -227,7 +232,9 @@ class StockMarketSpider(scrapy.Spider):
 
         yield scrapy.Request(url=esp_chart_uri,
                              callback=self.get_eps_data,
-                             meta={'item': item_loader.item})
+                             meta={'item': item_loader.item,
+                                   "zyte_api": {"browserHtml": True,
+                                                "httpResponseBody": False, }})
 
 
     def get_eps_data(self, response):
@@ -281,7 +288,9 @@ class StockMarketSpider(scrapy.Spider):
 
         yield scrapy.Request(url=price_sales_chart_uri,
                              callback=self.get_price_sales_data,
-                             meta={'item': item_loader.item})
+                             meta={'item': item_loader.item,
+                                   "zyte_api": {"browserHtml": True,
+                                                "httpResponseBody": False, }})
 
     def get_price_sales_data(self, response):
         item_loader = ItemLoader(item=response.request.meta['item'],
@@ -308,7 +317,9 @@ class StockMarketSpider(scrapy.Spider):
 
         yield scrapy.Request(url=pe_ratio_chart_uri,
                              callback=self.get_pe_ratio_data,
-                             meta={'item': item_loader.item})
+                             meta={'item': item_loader.item,
+                                   "zyte_api": {"browserHtml": True,
+                                                "httpResponseBody": False, }})
 
     def get_pe_ratio_data(self, response):
         item_loader = ItemLoader(item=response.request.meta['item'],
@@ -335,7 +346,9 @@ class StockMarketSpider(scrapy.Spider):
 
         yield scrapy.Request(url=market_cap_chart_uri,
                              callback=self.get_market_cap_data,
-                             meta={'item': item_loader.item})
+                             meta={'item': item_loader.item,
+                                   "zyte_api": {"browserHtml": True,
+                                                "httpResponseBody": False, }})
 
     def get_market_cap_data(self, response):
         item_loader = ItemLoader(item=response.request.meta['item'],

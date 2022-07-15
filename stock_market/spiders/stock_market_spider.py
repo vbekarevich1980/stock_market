@@ -1,3 +1,14 @@
+"""
+To run script without Zyte change 7 occurrences of
+
+ meta={'item': item_loader.item,
+       "zyte_api": {"browserHtml": True,
+                    "httpResponseBody": False, }})
+for
+
+ meta={'item': item_loader.item})
+"""
+
 import re
 import json
 

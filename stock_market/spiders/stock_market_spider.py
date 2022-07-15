@@ -1,14 +1,17 @@
 import re
+import json
 
 import scrapy
 import openpyxl
-import json
-from pathlib import Path
-from scrapy.loader import ItemLoader
-from stock_market.items import StockMarketItem
-from itemloaders.processors import Join, MapCompose, TakeFirst
 import chompjs
+
 from datetime import datetime, timedelta
+from pathlib import Path
+
+from scrapy.loader import ItemLoader
+from itemloaders.processors import TakeFirst
+
+from stock_market.items import StockMarketItem
 
 
 class StockMarketSpider(scrapy.Spider):
@@ -61,7 +64,7 @@ class StockMarketSpider(scrapy.Spider):
         )
         item_loader.load_item()
         # Scrap earnings
-        earnings_uri = self.companies[item_loader.item['Ticker']]['uri']
+        earnings_uri = self.companies[item_loader.item['Ticker']]['uri'] + 'earnings/'
         yield scrapy.Request(url=earnings_uri, callback=self.get_earnings,
                              meta={'item': item_loader.item})
 
@@ -72,13 +75,18 @@ class StockMarketSpider(scrapy.Spider):
         # Get 'Nxt Earning dt' field
         item_loader.add_css(
             'Nxt Earning dt',
-            'div.mt-3.mb-1.p-1.gradient-green.c-white + dl div.price-data:nth-child(6) dd.m-0'
+            'table#earnings-history > tbody > tr:nth-child(1) > td:nth-child(1)'
         )
         item_loader.load_item()
         # Scrap revenue chart
-        name = '-'.join([word for word in re.split(' |-', self.companies[item_loader.item['Ticker']]['name'].lower()) if
-                         word.isalnum()])
-        revenue_uri = f"https://www.macrotrends.net/stocks/charts/{item_loader.item['Ticker']}/" \
+        name = '-'.join(
+            [word for word in re.split(
+                ' |-',
+                self.companies[item_loader.item['Ticker']]['name'].lower()
+            ) if word.isalnum()]
+        )
+        revenue_uri = f"https://www.macrotrends.net/stocks/charts/" \
+                      f"{item_loader.item['Ticker']}/" \
                       f"{name}/revenue"
         yield scrapy.Request(url=revenue_uri, callback=self.get_revenue_chart,
                              meta={'item': item_loader.item,
@@ -99,17 +107,14 @@ class StockMarketSpider(scrapy.Spider):
         item_loader.add_value('MacroTrend Net Income Link', net_income_link)
 
         # Get 'MacroTrend EPS Link' field
-        eps_link = response.url.replace('revenue', 'eps-earnings-per-share-diluted')
+        eps_link = response.url.replace(
+            'revenue', 'eps-earnings-per-share-diluted'
+        )
         item_loader.add_value('MacroTrend EPS Link', eps_link)
 
         # Get 'MacroTrend Mkt Cap Link' field
         cap_link = response.url.replace('revenue', 'market-cap')
         item_loader.add_value('MacroTrend Mkt Cap Link', cap_link)
-
-        # Get '12mo Rev Growth' field
-        # revenue_12_growth = response.css('div#main_content div:nth-child(2) li:nth-child(2)')
-        # if 'revenue for the twelve months' in revenue_12_growth.get():
-        #     item_loader.add_css('12mo Rev Growth', 'div#main_content div:nth-child(2) li:nth-child(2) strong')
 
         item_loader.load_item()
 
@@ -124,7 +129,6 @@ class StockMarketSpider(scrapy.Spider):
                              meta={'item': item_loader.item,
                                    "zyte_api": {"browserHtml": True,
                                                 "httpResponseBody": False, }})
-
 
     def get_revenue_data(self, response):
         item_loader = ItemLoader(item=response.request.meta['item'],
@@ -164,7 +168,9 @@ class StockMarketSpider(scrapy.Spider):
 
         # Get 'YoY Quarterly Rev Growth' field
         revenue_yoy_quarterly_growth = data[-1]['v3']/100
-        item_loader.add_value('YoY Quarterly Rev Growth', revenue_yoy_quarterly_growth)
+        item_loader.add_value(
+            'YoY Quarterly Rev Growth', revenue_yoy_quarterly_growth
+        )
 
         # Get 'Q/Q Rev Growth' field
         revenue_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 1
@@ -173,7 +179,10 @@ class StockMarketSpider(scrapy.Spider):
         item_loader.load_item()
 
         # Scrap net income data
-        net_income_chart_uri = f"https://www.macrotrends.net/assets/php/fundamental_iframe.php?t={item_loader.item['Ticker']}&type=net-income&statement=income-statement&freq=Q"
+        net_income_chart_uri = f"https://www.macrotrends.net/assets/php/" \
+                               f"fundamental_iframe.php?t=" \
+                               f"{item_loader.item['Ticker']}&type=" \
+                               f"net-income&statement=income-statement&freq=Q"
 
         yield scrapy.Request(url=net_income_chart_uri,
                              callback=self.get_net_income_data,
@@ -219,7 +228,10 @@ class StockMarketSpider(scrapy.Spider):
 
         # Get 'YoY Quarterly NI Growth' field
         net_income_yoy_quarterly_growth = data[-1]['v3']/100
-        item_loader.add_value('YoY Quarterly NI Growth', net_income_yoy_quarterly_growth)
+        item_loader.add_value(
+            'YoY Quarterly NI Growth',
+            net_income_yoy_quarterly_growth
+        )
 
         # Get 'Q/Q NI Growth' field
         net_income_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 1
@@ -228,14 +240,17 @@ class StockMarketSpider(scrapy.Spider):
         item_loader.load_item()
 
         # Scrap eps data
-        esp_chart_uri = f"https://www.macrotrends.net/assets/php/fundamental_iframe.php?t={item_loader.item['Ticker']}&type=eps-earnings-per-share-diluted&statement=income-statement&freq=Q"
+        esp_chart_uri = f"https://www.macrotrends.net/assets/php/" \
+                        f"fundamental_iframe.php?t=" \
+                        f"{item_loader.item['Ticker']}&type=" \
+                        f"eps-earnings-per-share-diluted&statement=" \
+                        f"income-statement&freq=Q"
 
         yield scrapy.Request(url=esp_chart_uri,
                              callback=self.get_eps_data,
                              meta={'item': item_loader.item,
                                    "zyte_api": {"browserHtml": True,
                                                 "httpResponseBody": False, }})
-
 
     def get_eps_data(self, response):
         item_loader = ItemLoader(item=response.request.meta['item'],
@@ -275,7 +290,9 @@ class StockMarketSpider(scrapy.Spider):
 
         # Get 'YoY Quarterly EPS Growth' field
         esp_yoy_quarterly_growth = data[-1]['v3']/100
-        item_loader.add_value('YoY Quarterly EPS Growth', esp_yoy_quarterly_growth)
+        item_loader.add_value(
+            'YoY Quarterly EPS Growth', esp_yoy_quarterly_growth
+        )
 
         # Get 'Q/Q EPS Growth' field
         esp_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 1
@@ -284,7 +301,10 @@ class StockMarketSpider(scrapy.Spider):
         item_loader.load_item()
 
         # Scrap price sales data
-        price_sales_chart_uri = f"https://www.macrotrends.net/assets/php/fundamental_iframe.php?t={item_loader.item['Ticker']}&type=price-sales&statement=price-ratios&freq=Q"
+        price_sales_chart_uri = f"https://www.macrotrends.net/assets/php/" \
+                                f"fundamental_iframe.php?t=" \
+                                f"{item_loader.item['Ticker']}&type=" \
+                                f"price-sales&statement=price-ratios&freq=Q"
 
         yield scrapy.Request(url=price_sales_chart_uri,
                              callback=self.get_price_sales_data,
@@ -313,7 +333,10 @@ class StockMarketSpider(scrapy.Spider):
         item_loader.load_item()
 
         # Scrap pe ratio data
-        pe_ratio_chart_uri = f"https://www.macrotrends.net/assets/php/fundamental_iframe.php?t={item_loader.item['Ticker']}&type=pe-ratio&statement=price-ratios&freq=Q"
+        pe_ratio_chart_uri = f"https://www.macrotrends.net/assets/php/" \
+                             f"fundamental_iframe.php?t=" \
+                             f"{item_loader.item['Ticker']}&type=pe-ratio&" \
+                             f"statement=price-ratios&freq=Q"
 
         yield scrapy.Request(url=pe_ratio_chart_uri,
                              callback=self.get_pe_ratio_data,
@@ -342,7 +365,8 @@ class StockMarketSpider(scrapy.Spider):
         item_loader.load_item()
 
         # Scrap market cap data
-        market_cap_chart_uri = f"https://www.macrotrends.net/assets/php/market_cap.php?t={item_loader.item['Ticker']}"
+        market_cap_chart_uri = f"https://www.macrotrends.net/assets/php/" \
+                               f"market_cap.php?t={item_loader.item['Ticker']}"
 
         yield scrapy.Request(url=market_cap_chart_uri,
                              callback=self.get_market_cap_data,

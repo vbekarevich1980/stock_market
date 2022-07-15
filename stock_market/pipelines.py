@@ -5,7 +5,7 @@
 
 
 # useful for handling different item types with a single interface
-from itemadapter import ItemAdapter
+
 import os
 import json
 from urllib.parse import quote
@@ -20,8 +20,6 @@ class StockMarketPipeline:
     def open_spider(self, spider):
         if spider.name == 'companies':
             self.tickers = {}
-            # self.file = open('companies.json', 'w')
-            # self.file.write('{')
 
     def close_spider(self, spider):
         if spider.name == 'companies':
@@ -33,9 +31,6 @@ class StockMarketPipeline:
             self.tickers[ItemAdapter(item).asdict()['ticker']] = {}
             self.tickers[ItemAdapter(item).asdict()['ticker']]['name'] = ItemAdapter(item).asdict()['name']
             self.tickers[ItemAdapter(item).asdict()['ticker']]['uri'] = ItemAdapter(item).asdict()['uri']
-            #line = f"{ItemAdapter(item).asdict()['ticker']}: {ItemAdapter(item).asdict().items()}" + "\n"
-
-            #self.file.write(line)
         return item
 
 
@@ -43,7 +38,7 @@ class ScreenshotPipeline:
     """Pipeline that uses Splash to render screenshot of
     every Scrapy item."""
 
-    SPLASH_URL = "http://localhost:8050/render.png?url={}&wait=0.5"
+    SPLASH_URL = "http://localhost:8050/render.png?url={}&wait=1.5"
 
     async def process_item(self, item, spider):
         adapter = ItemAdapter(item)
@@ -84,7 +79,9 @@ class ScreenshotPipeline:
             screenshot_load_attemt = 0
             while not is_screenshot_loaded:
                 request = scrapy.Request(screenshot_url)
-                response = await maybe_deferred_to_future(spider.crawler.engine.download(request, spider))
+                response = await maybe_deferred_to_future(
+                    spider.crawler.engine.download(request, spider)
+                )
 
                 if len(response.body) or screenshot_load_attemt > 3:
                     is_screenshot_loaded = True
@@ -94,10 +91,14 @@ class ScreenshotPipeline:
                 # Error happened, return item.
                 continue
             # Save screenshot to file
-            screenshot_dir = os.path.join(os.path.dirname(__file__), 'screenshots')
+            screenshot_dir = os.path.join(
+                os.path.dirname(__file__), 'screenshots'
+            )
             if not os.path.exists(screenshot_dir):
                 os.mkdir(screenshot_dir)
-            filename = os.path.join(screenshot_dir, f"{adapter['Ticker']}_{name}.png")
+            filename = os.path.join(
+                screenshot_dir, f"{adapter['Ticker']}_{name}.png"
+            )
             with open(filename, "wb") as f:
                 f.write(response.body)
 

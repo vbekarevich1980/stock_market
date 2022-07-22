@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     for destination_row, src_row in zip(
             destination_sheet.iter_rows(min_row=2, values_only=False),
-            src_sheet.iter_rows(min_row=2, values_only=False)):
+            src_sheet.iter_rows(min_row=2, min_col=3, values_only=False)):
         for destination_cell, src_cell in zip(destination_row, src_row):
             destination_cell.value = src_cell.value
 

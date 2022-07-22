@@ -29,8 +29,10 @@ class StockMarketPipeline:
     def process_item(self, item, spider):
         if spider.name == 'companies':
             self.tickers[ItemAdapter(item).asdict()['ticker']] = {}
-            self.tickers[ItemAdapter(item).asdict()['ticker']]['name'] = ItemAdapter(item).asdict()['name']
-            self.tickers[ItemAdapter(item).asdict()['ticker']]['uri'] = ItemAdapter(item).asdict()['uri']
+            self.tickers[ItemAdapter(item).asdict()['ticker']]['name'] = \
+                ItemAdapter(item).asdict()['name']
+            self.tickers[ItemAdapter(item).asdict()['ticker']]['uri'] = \
+                ItemAdapter(item).asdict()['uri']
         return item
 
 
@@ -38,7 +40,7 @@ class ScreenshotPipeline:
     """Pipeline that uses Splash to render screenshot of
     every Scrapy item."""
 
-    SPLASH_URL = "http://localhost:8050/render.png?url={}&wait=1.5"
+    SPLASH_URL = "http://localhost:8050/render.png?url={}&wait=0.5"
 
     async def process_item(self, item, spider):
         adapter = ItemAdapter(item)
@@ -76,16 +78,20 @@ class ScreenshotPipeline:
             screenshot_url = self.SPLASH_URL.format(encoded_item_url)
 
             is_screenshot_loaded = False
-            screenshot_load_attemt = 0
+            screenshot_load_attempt = 0
             while not is_screenshot_loaded:
                 request = scrapy.Request(screenshot_url)
                 response = await maybe_deferred_to_future(
                     spider.crawler.engine.download(request, spider)
                 )
-
-                if len(response.body) or screenshot_load_attemt > 3:
+                # If the response is less than 16 000 bytes, the image is blank
+                if len(response.body) > 16000 or screenshot_load_attempt > 3:
                     is_screenshot_loaded = True
-                screenshot_load_attemt += 1
+                else:
+                    wait_time = int(screenshot_url.split('=')[-1]) + 0.5
+                    screenshot_url = f"{screenshot_url.split('wait=')[-2]}" \
+                                     f"wait={wait_time}"
+                screenshot_load_attempt += 1
 
             if response.status != 200:
                 # Error happened, return item.

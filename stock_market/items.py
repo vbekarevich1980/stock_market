@@ -4,7 +4,7 @@
 # https://docs.scrapy.org/en/latest/topics/items.html
 
 import scrapy
-from itemloaders.processors import Join, MapCompose, TakeFirst, Compose
+from itemloaders.processors import MapCompose, TakeFirst
 from w3lib.html import remove_tags
 import datetime
 
@@ -14,6 +14,8 @@ class StockMarketItem(scrapy.Item):
     # name = scrapy.Field()
     def __init__(self):
         super().__init__()
+        self.fields['Name'] = scrapy.Field(output_processor=TakeFirst())
+        self.fields['URL'] = scrapy.Field(output_processor=TakeFirst())
         self.fields['Ticker'] = scrapy.Field(output_processor=TakeFirst())
 
         self.fields['Dividend (Amt)'] = scrapy.Field(

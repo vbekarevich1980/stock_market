@@ -59,9 +59,87 @@ class StockMarketSpider(scrapy.Spider):
             # Get 'Ticker' field
             stock_market_item['Ticker'] = row[0]
             # Scrap dividends
-            dividend_uri = self.companies[row[0]]['uri'] + 'dividend/'
+            # dividend_uri = self.companies[row[0]]['uri'] + 'dividend/'
+            # yield scrapy.Request(url=dividend_uri, callback=self.get_dividend,
+            #                      meta={'item': stock_market_item})
+            # Scrap company url
+            url_request_uri = 'https://www.marketbeat.com/scripts/AutoComplete.ashx?searchquery=' + row[0]
+            yield scrapy.Request(
+                url=url_request_uri,
+                callback=self.get_company_url,
+                meta={'item': stock_market_item}
+            )
+
+    def get_company_url(self, response):
+        item_loader = ItemLoader(item=response.request.meta['item'],
+                                 default_output_processor=TakeFirst(),
+                                 selector=response)
+
+        ticker = item_loader.item['Ticker']
+        # Get 'URL' field
+        data = json.loads(response.text)
+        stocks_companies = {}
+        has_company_found = False
+
+        for data_piece in data:
+            test1 = data_piece['category']
+            test2 = data_piece['data'].strip('/').split('/')[-1]
+            parsed_url = data_piece['data'].strip('/').split('/')
+            company = parsed_url[-1]
+            if (data_piece['category'] == 'Companies' and
+                    company == ticker):
+                stocks = parsed_url[-2]
+                stocks_companies[stocks] = {
+                    'Name': data_piece['label'],
+                    'URL': 'https://www.marketbeat.com' + data_piece['data']
+                }
+
+                # item_loader.add_value(
+                #     'Name',
+                #     data_piece['label']
+                # )
+                # item_loader.add_value(
+                #     'URL',
+                #     'https://www.marketbeat.com' + data_piece['data']
+                # )
+                # break
+            else:
+                continue
+
+        if len(stocks_companies) > 1:
+            stocks_list = 'or\n'.join([f'{stocks} for {stocks_companies[stocks]["Name"]}' for stocks in stocks_companies])
+
+
+            while not has_company_found:
+                stocks_user_prompt = input(f'Please, enter the stocks to search company on:\n{stocks_list}\n')
+                try:
+                    item_loader.add_value('Name', stocks_companies[stocks_user_prompt]['Name'])
+                    item_loader.add_value('URL', stocks_companies[stocks_user_prompt]['URL'])
+                    has_company_found = True
+                except KeyError:
+                    print('The stocks, you have entered is not on promted list. Please, try again.')
+        elif len(stocks_companies) == 1:
+            item_loader.add_value('Name',
+                                  stocks_companies[list(stocks_companies)[0]]['Name'])
+            item_loader.add_value('URL',
+                                  stocks_companies[list(stocks_companies)[0]]['URL'])
+            has_company_found = True
+        else:
+            try:
+                item_loader.add_value('Name',
+                                      self.companies[ticker]['name'])
+                item_loader.add_value('URL',
+                                      self.companies[ticker]['uri'])
+                has_company_found = True
+            except KeyError:
+                print(f'The company {ticker} was not found.')
+
+        if has_company_found:
+            item_loader.load_item()
+            # Scrap dividends
+            dividend_uri = item_loader.item['URL'] + 'dividend/'
             yield scrapy.Request(url=dividend_uri, callback=self.get_dividend,
-                                 meta={'item': stock_market_item})
+                                 meta={'item': item_loader.item})
 
 
     def get_dividend(self, response):
@@ -75,7 +153,7 @@ class StockMarketSpider(scrapy.Spider):
         )
         item_loader.load_item()
         # Scrap earnings
-        earnings_uri = self.companies[item_loader.item['Ticker']]['uri'] + 'earnings/'
+        earnings_uri = item_loader.item['URL'] + 'earnings/'
         yield scrapy.Request(url=earnings_uri, callback=self.get_earnings,
                              meta={'item': item_loader.item})
 
@@ -93,7 +171,7 @@ class StockMarketSpider(scrapy.Spider):
         name = '-'.join(
             [word for word in re.split(
                 ' |-',
-                self.companies[item_loader.item['Ticker']]['name'].lower()
+                item_loader.item['Name'].lower()
             ) if word.isalnum()]
         )
         revenue_uri = f"https://www.macrotrends.net/stocks/charts/" \
@@ -156,24 +234,32 @@ class StockMarketSpider(scrapy.Spider):
         revenue_10_year_high = revenue_10_year_low = revenue_12_months
         revenue_10_year_high_date = revenue_10_year_low_date = data[-1]['date']
         for data_piece in data[-40:]:
-            value = data_piece['v1'] * 1000000000
-            if value >= revenue_10_year_high:
-                revenue_10_year_high = value
-                revenue_10_year_high_date = data_piece['date']
-            if value <= revenue_10_year_low:
-                revenue_10_year_low = value
-                revenue_10_year_low_date = data_piece['date']
+            try:
+                value = data_piece['v1'] * 1000000000
+                if value >= revenue_10_year_high:
+                    revenue_10_year_high = value
+                    revenue_10_year_high_date = data_piece['date']
+                if value <= revenue_10_year_low:
+                    revenue_10_year_low = value
+                    revenue_10_year_low_date = data_piece['date']
+            except TypeError:
+                continue
         item_loader.add_value('10yr Rev High', revenue_10_year_high)
         item_loader.add_value('10yr Rev Low', revenue_10_year_low)
         item_loader.add_value('10 Yr Rev High Dt', revenue_10_year_high_date)
         item_loader.add_value('10 Yr Rev Low Dt', revenue_10_year_low_date)
 
         # Get '12mo Rev Growth' field
-        revenue_previous_12_months = data[-5]['v1'] * 1000000000
-        if revenue_12_months > revenue_previous_12_months:
-            revenue_12_growth = (revenue_12_months / revenue_previous_12_months - 1) * 1
-        else:
-            revenue_12_growth = (revenue_previous_12_months / revenue_12_months - 1) * -1
+        for data_piece in data[-5:]:
+            try:
+                revenue_previous_12_months = data_piece['v1'] * 1000000000
+                if revenue_12_months > revenue_previous_12_months:
+                    revenue_12_growth = (revenue_12_months / revenue_previous_12_months - 1) * 1
+                else:
+                    revenue_12_growth = (revenue_previous_12_months / revenue_12_months - 1) * -1
+                break
+            except TypeError:
+                continue
 
         item_loader.add_value('12mo Rev Growth', revenue_12_growth)
 
@@ -216,33 +302,55 @@ class StockMarketSpider(scrapy.Spider):
         net_income_10_year_high = net_income_10_year_low = net_income_12_months
         net_income_10_year_high_date = net_income_10_year_low_date = data[-1]['date']
         for data_piece in data[-40:]:
-            value = data_piece['v1'] * 1000000000
-            if value >= net_income_10_year_high:
-                net_income_10_year_high = value
-                net_income_10_year_high_date = data_piece['date']
-            if value <= net_income_10_year_low:
-                net_income_10_year_low = value
-                net_income_10_year_low_date = data_piece['date']
+            try:
+                value = data_piece['v1'] * 1000000000
+                if value >= net_income_10_year_high:
+                    net_income_10_year_high = value
+                    net_income_10_year_high_date = data_piece['date']
+                if value <= net_income_10_year_low:
+                    net_income_10_year_low = value
+                    net_income_10_year_low_date = data_piece['date']
+            except TypeError:
+                continue
         item_loader.add_value('10yr NI High', net_income_10_year_high)
         item_loader.add_value('10yr NI Low', net_income_10_year_low)
         item_loader.add_value('10 Yr NI High Dt', net_income_10_year_high_date)
         item_loader.add_value('10 Yr NI Low Dt', net_income_10_year_low_date)
 
         # Get '12 mo NI Growth' field
-        net_income_previous_12_months = data[-5]['v1'] * 1000000000
-        if net_income_12_months > net_income_previous_12_months:
-            net_income_12_growth = (net_income_12_months / net_income_previous_12_months - 1) * 1
-        else:
-            net_income_12_growth = (net_income_previous_12_months / net_income_12_months - 1) * -1
+        for data_piece in data[-5:]:
+            try:
+                net_income_previous_12_months = data_piece['v1'] * 1000000000
+                if net_income_12_months > net_income_previous_12_months:
+                    net_income_12_growth = (net_income_12_months / net_income_previous_12_months - 1) * 1
+                else:
+                    net_income_12_growth = (net_income_previous_12_months / net_income_12_months - 1) * -1
+                break
+            except TypeError:
+                continue
 
         item_loader.add_value('12 mo NI Growth', net_income_12_growth)
 
         # Get 'YoY Quarterly NI Growth' field
-        net_income_yoy_quarterly_growth = data[-1]['v3']/100
-        item_loader.add_value(
-            'YoY Quarterly NI Growth',
-            net_income_yoy_quarterly_growth
-        )
+        net_income_yoy_quarterly_growth = ''
+        try:
+            net_income_yoy_quarterly_growth = data[-1]['v3']/100
+        except TypeError:
+            net_income_current_q = data[-1]['v2'] * 1000000000
+
+            for data_piece in data[-5:]:
+                try:
+                    net_income_previous_4_q = data_piece['v2'] * 1000000000
+                    if net_income_current_q > net_income_previous_4_q:
+                        net_income_yoy_quarterly_growth = abs((net_income_current_q / net_income_previous_4_q - 1))
+                    else:
+                        net_income_yoy_quarterly_growth = -abs((net_income_current_q / net_income_previous_4_q - 1))
+                    break
+                except TypeError:
+                    continue
+
+        item_loader.add_value('YoY Quarterly NI Growth',
+            net_income_yoy_quarterly_growth)
 
         # Get 'Q/Q NI Growth' field
         net_income_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 1
@@ -278,32 +386,55 @@ class StockMarketSpider(scrapy.Spider):
         esp_10_year_high = esp_10_year_low = esp_12_months
         esp_10_year_high_date = esp_10_year_low_date = data[-1]['date']
         for data_piece in data[-40:]:
-            value = data_piece['v1']
-            if value >= esp_10_year_high:
-                esp_10_year_high = value
-                esp_10_year_high_date = data_piece['date']
-            if value <= esp_10_year_low:
-                esp_10_year_low = value
-                esp_10_year_low_date = data_piece['date']
+            try:
+                value = data_piece['v1']
+                if value >= esp_10_year_high:
+                    esp_10_year_high = value
+                    esp_10_year_high_date = data_piece['date']
+                if value <= esp_10_year_low:
+                    esp_10_year_low = value
+                    esp_10_year_low_date = data_piece['date']
+            except TypeError:
+                continue
         item_loader.add_value('10yr EPS High', esp_10_year_high)
         item_loader.add_value('10yr EPS Low', esp_10_year_low)
         item_loader.add_value('10 Yr EPS High Dt', esp_10_year_high_date)
         item_loader.add_value('10 Yr EPS Low Dt', esp_10_year_low_date)
 
         # Get '12 mo EPS Growth' field
-        esp_previous_12_months = data[-5]['v1']
-        if esp_12_months > esp_previous_12_months:
-            esp_12_growth = (esp_12_months / esp_previous_12_months - 1) * 1
-        else:
-            esp_12_growth = (esp_previous_12_months / esp_12_months - 1) * -1
+        for data_piece in data[-5:]:
+            try:
+                esp_previous_12_months = data_piece['v1']
+                if esp_12_months > esp_previous_12_months:
+                    esp_12_growth = (esp_12_months / esp_previous_12_months - 1) * 1
+                else:
+                    esp_12_growth = (esp_previous_12_months / esp_12_months - 1) * -1
+                break
+            except TypeError:
+                continue
 
         item_loader.add_value('12 mo EPS Growth', esp_12_growth)
 
         # Get 'YoY Quarterly EPS Growth' field
-        esp_yoy_quarterly_growth = data[-1]['v3']/100
-        item_loader.add_value(
-            'YoY Quarterly EPS Growth', esp_yoy_quarterly_growth
-        )
+        esp_yoy_quarterly_growth = ''
+        try:
+            esp_yoy_quarterly_growth = data[-1]['v3']/100
+        except TypeError:
+            esp_current_q = data[-1]['v2'] * 1000000000
+
+            for data_piece in data[-5:]:
+                try:
+                    esp_previous_4_q = data_piece['v2'] * 1000000000
+                    if esp_current_q > esp_previous_4_q:
+                        esp_yoy_quarterly_growth = abs((esp_current_q / esp_previous_4_q - 1))
+                    else:
+                        esp_yoy_quarterly_growth = -abs((esp_current_q / esp_previous_4_q - 1))
+                    break
+                except TypeError:
+                    continue
+
+        item_loader.add_value('YoY Quarterly EPS Growth',
+                              esp_yoy_quarterly_growth)
 
         # Get 'Q/Q EPS Growth' field
         esp_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 1
@@ -331,13 +462,19 @@ class StockMarketSpider(scrapy.Spider):
         data = chompjs.parse_js_object(data_javascript)
 
         # Get '10 Yr High / Low P/S' fields
-        price_sales_10_year_high = price_sales_10_year_low = data[-40]['v3']
+        try:
+            price_sales_10_year_high = price_sales_10_year_low = data[-40]['v3']
+        except IndexError:
+            price_sales_10_year_high = price_sales_10_year_low = data[0]['v3']
         for data_piece in data[-40:]:
-            value = data_piece['v3']
-            if value >= price_sales_10_year_high:
-                price_sales_10_year_high = value
-            if value <= price_sales_10_year_low:
-                price_sales_10_year_low = value
+            try:
+                value = data_piece['v3']
+                if value >= price_sales_10_year_high:
+                    price_sales_10_year_high = value
+                if value <= price_sales_10_year_low:
+                    price_sales_10_year_low = value
+            except TypeError:
+                continue
         item_loader.add_value('10 Yr High P/S', price_sales_10_year_high)
         item_loader.add_value('10 Yr Low P/S', price_sales_10_year_low)
 
@@ -363,13 +500,19 @@ class StockMarketSpider(scrapy.Spider):
         data = chompjs.parse_js_object(data_javascript)
 
         # Get '10 Yr High / Low P/E' fields
-        pe_ratio_10_year_high = pe_ratio_10_year_low = data[-40]['v3']
+        try:
+            pe_ratio_10_year_high = pe_ratio_10_year_low = data[-40]['v3']
+        except IndexError:
+            pe_ratio_10_year_high = pe_ratio_10_year_low = data[0]['v3']
         for data_piece in data[-40:]:
-            value = data_piece['v3']
-            if value >= pe_ratio_10_year_high:
-                pe_ratio_10_year_high = value
-            if value <= pe_ratio_10_year_low:
-                pe_ratio_10_year_low = value
+            try:
+                value = data_piece['v3']
+                if value >= pe_ratio_10_year_high:
+                    pe_ratio_10_year_high = value
+                if value <= pe_ratio_10_year_low:
+                    pe_ratio_10_year_low = value
+            except TypeError:
+                continue
         item_loader.add_value('10 Yr High P/E', pe_ratio_10_year_high)
         item_loader.add_value('10 Yr Low P/E', pe_ratio_10_year_low)
 

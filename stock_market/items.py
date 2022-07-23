@@ -17,6 +17,7 @@ class StockMarketItem(scrapy.Item):
         self.fields['Name'] = scrapy.Field(output_processor=TakeFirst())
         self.fields['URL'] = scrapy.Field(output_processor=TakeFirst())
         self.fields['Ticker'] = scrapy.Field(output_processor=TakeFirst())
+        self.fields['Exchange'] = scrapy.Field(output_processor=TakeFirst())
 
         self.fields['Dividend (Amt)'] = scrapy.Field(
             input_processor=MapCompose(

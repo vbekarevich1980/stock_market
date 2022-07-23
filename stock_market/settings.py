@@ -6,6 +6,7 @@
 #     https://docs.scrapy.org/en/latest/topics/settings.html
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
+import os
 
 BOT_NAME = 'stock_market'
 
@@ -20,7 +21,7 @@ NEWSPIDER_MODULE = 'stock_market.spiders'
 ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
-#CONCURRENT_REQUESTS = 32
+CONCURRENT_REQUESTS = 8
 
 # Configure a delay for requests for the same website (default: 0)
 # See https://docs.scrapy.org/en/latest/topics/settings.html#download-delay
@@ -116,7 +117,6 @@ DOWNLOAD_HANDLERS = {
 # Having the following in the env var would also work.
 ZYTE_API_KEY = ""
 
-
 ZYTE_API_DEFAULT_PARAMS = {
     "browserHtml": True,
     "geolocation": "US",
@@ -127,3 +127,17 @@ RETRY_HTTP_CODES = [500, 502, 503, 504, 520, 522, 524, 408, 429]
 RETRY_TIMES = 30
 # Adjust retry request priority relative to original request.
 RETRY_PRIORITY_ADJUST = 1
+# Adjust request priority relative to the depth of the request.
+DEPTH_PRIORITY = 1
+
+JOBDIR = os.path.abspath(
+    os.path.join(
+        os.path.dirname(__file__),
+        os.pardir,
+        'crawls',
+        'stock_market'
+    )
+)
+
+SCHEDULER_DISK_QUEUE = 'scrapy.squeues.PickleFifoDiskQueue'
+SCHEDULER_MEMORY_QUEUE = 'scrapy.squeues.FifoMemoryQueue'

@@ -176,6 +176,10 @@ class StockMarketSpider(scrapy.Spider):
             callback=self.get_revenue_chart,
             meta={
                 'item': item_loader.item,
+                'zyte_api': {
+                    'browserHtml': True,
+                    'httpResponseBody': False,
+                }
             }
         )
 
@@ -215,6 +219,10 @@ class StockMarketSpider(scrapy.Spider):
             callback=self.get_revenue_data,
             meta={
                 'item': item_loader.item,
+                'zyte_api': {
+                    'browserHtml': True,
+                    'httpResponseBody': False,
+                }
             }
         )
 
@@ -314,6 +322,10 @@ class StockMarketSpider(scrapy.Spider):
             callback=self.get_net_income_data,
             meta={
                 'item': item_loader.item,
+                'zyte_api': {
+                    'browserHtml': True,
+                    'httpResponseBody': False,
+                }
             }
         )
 
@@ -434,6 +446,10 @@ class StockMarketSpider(scrapy.Spider):
             callback=self.get_eps_data,
             meta={
                 'item': item_loader.item,
+                'zyte_api': {
+                    'browserHtml': True,
+                    'httpResponseBody': False,
+                }
             }
         )
 
@@ -537,6 +553,10 @@ class StockMarketSpider(scrapy.Spider):
             callback=self.get_price_sales_data,
             meta={
                 'item': item_loader.item,
+                'zyte_api': {
+                    'browserHtml': True,
+                    'httpResponseBody': False,
+                }
             }
         )
 
@@ -596,6 +616,10 @@ class StockMarketSpider(scrapy.Spider):
             callback=self.get_pe_ratio_data,
             meta={
                 'item': item_loader.item,
+                'zyte_api': {
+                    'browserHtml': True,
+                    'httpResponseBody': False,
+                }
             }
         )
 
@@ -650,6 +674,10 @@ class StockMarketSpider(scrapy.Spider):
             callback=self.get_market_cap_data,
             meta={
                 'item': item_loader.item,
+                'zyte_api': {
+                    'browserHtml': True,
+                    'httpResponseBody': False,
+                }
             }
         )
 

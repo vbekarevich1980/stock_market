@@ -85,10 +85,10 @@ class ScreenshotPipeline:
                     spider.crawler.engine.download(request, spider)
                 )
                 # If the response is less than 16 000 bytes, the image is blank
-                if len(response.body) > 16000 or screenshot_load_attempt > 3:
+                if len(response.body) > 16000 or screenshot_load_attempt > 2:
                     is_screenshot_loaded = True
                 else:
-                    wait_time = int(screenshot_url.split('=')[-1]) + 0.5
+                    wait_time = float(screenshot_url.split('=')[-1]) + 0.5
                     screenshot_url = f"{screenshot_url.split('wait=')[-2]}" \
                                      f"wait={wait_time}"
                 screenshot_load_attempt += 1

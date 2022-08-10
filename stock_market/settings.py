@@ -68,7 +68,10 @@ DOWNLOADER_MIDDLEWARES = {
 }
 
 DUPEFILTER_CLASS = 'scrapy_splash.SplashAwareDupeFilter'
+#DUPEFILTER_CLASS = 'scrapy.dupefilters.BaseDupeFilter'
 #HTTPCACHE_STORAGE = 'scrapy_splash.SplashAwareFSCacheStorage'
+
+HTTPERROR_ALLOWED_CODES = [404]
 
 # Enable or disable extensions
 # See https://docs.scrapy.org/en/latest/topics/extensions.html
@@ -122,7 +125,7 @@ ZYTE_API_DEFAULT_PARAMS = {
     "geolocation": "US",
 }
 
-RETRY_HTTP_CODES = [500, 502, 503, 504, 520, 522, 524, 408, 429]
+RETRY_HTTP_CODES = [500, 502, 503, 504, 520, 522, 524, 408, 429, 521]
 # Maximum number of times to retry, in addition to the first download.
 RETRY_TIMES = 30
 # Adjust retry request priority relative to original request.

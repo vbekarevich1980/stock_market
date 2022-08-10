@@ -73,9 +73,9 @@ class StockMarketSpider(scrapy.Spider):
                 yield scrapy.Request(
                     url=dividend_uri,
                     callback=self.get_dividend,
+                    dont_filter=True,
                     meta={
                         'item': stock_market_item,
-                        'dont_filter': True,
                     }
                 )
             else:
@@ -120,9 +120,9 @@ class StockMarketSpider(scrapy.Spider):
         return scrapy.Request(
             url=dividend_uri,
             callback=self.get_dividend,
+            dont_filter=True,
             meta={
                 'item': item_loader.item,
-                'dont_filter': True,
             }
         )
 
@@ -144,9 +144,9 @@ class StockMarketSpider(scrapy.Spider):
         return scrapy.Request(
             url=earnings_uri,
             callback=self.get_earnings,
+            dont_filter=True,
             meta={
                 'item': item_loader.item,
-                'dont_filter': True,
             }
         )
 
@@ -371,16 +371,20 @@ class StockMarketSpider(scrapy.Spider):
             for data_piece in data[-5:]:
                 try:
                     net_income_previous_12_months = data_piece['v1']
-                    if net_income_12_months > net_income_previous_12_months:
-                        net_income_12_growth = (net_income_12_months
-                                                / net_income_previous_12_months
-                                                - 1) * 1
-                    else:
-                        net_income_12_growth = (net_income_previous_12_months
-                                                / net_income_12_months
-                                                - 1) * -1
+                    net_income_12_growth = (net_income_12_months - net_income_previous_12_months) / abs(net_income_previous_12_months)
                     item_loader.add_value('12 mo NI Growth',
                                           net_income_12_growth)
+                    # net_income_previous_12_months = data_piece['v1']
+                    # if net_income_12_months > net_income_previous_12_months:
+                    #     net_income_12_growth = (net_income_12_months
+                    #                             / net_income_previous_12_months
+                    #                             - 1) * 1
+                    # else:
+                    #     net_income_12_growth = (net_income_previous_12_months
+                    #                             / net_income_12_months
+                    #                             - 1) * -1
+                    # item_loader.add_value('12 mo NI Growth',
+                    #                       net_income_12_growth)
                     break
                 except TypeError:
                     continue
@@ -481,13 +485,16 @@ class StockMarketSpider(scrapy.Spider):
             for data_piece in data[-5:]:
                 try:
                     esp_previous_12_months = data_piece['v1']
-                    if esp_12_months > esp_previous_12_months:
-                        esp_12_growth = (esp_12_months / esp_previous_12_months
-                                         - 1) * 1
-                    else:
-                        esp_12_growth = (esp_previous_12_months / esp_12_months
-                                         - 1) * -1
+                    esp_12_growth = (esp_12_months - esp_previous_12_months) / abs(esp_previous_12_months)
                     item_loader.add_value('12 mo EPS Growth', esp_12_growth)
+                    # esp_previous_12_months = data_piece['v1']
+                    # if esp_12_months > esp_previous_12_months:
+                    #     esp_12_growth = (esp_12_months / esp_previous_12_months
+                    #                      - 1) * 1
+                    # else:
+                    #     esp_12_growth = (esp_previous_12_months / esp_12_months
+                    #                      - 1) * -1
+                    # item_loader.add_value('12 mo EPS Growth', esp_12_growth)
                     break
                 except TypeError:
                     continue

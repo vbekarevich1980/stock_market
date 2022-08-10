@@ -399,14 +399,19 @@ class StockMarketSpider(scrapy.Spider):
                 for data_piece in data[-5:]:
                     try:
                         net_income_previous_4_q = data_piece['v2'] * 1000000000
-                        if net_income_current_q > net_income_previous_4_q:
-                            net_income_yoy_quarterly_growth = abs(
-                                (net_income_current_q / net_income_previous_4_q
-                                 - 1))
-                        else:
-                            net_income_yoy_quarterly_growth = -abs(
-                                (net_income_current_q / net_income_previous_4_q
-                                 - 1))
+                        net_income_yoy_quarterly_growth = (
+                                net_income_current_q - net_income_previous_4_q
+                        ) / abs(net_income_previous_4_q)
+                        
+                        # net_income_previous_4_q = data_piece['v2'] * 1000000000
+                        # if net_income_current_q > net_income_previous_4_q:
+                        #     net_income_yoy_quarterly_growth = abs(
+                        #         (net_income_current_q / net_income_previous_4_q
+                        #          - 1))
+                        # else:
+                        #     net_income_yoy_quarterly_growth = -abs(
+                        #         (net_income_current_q / net_income_previous_4_q
+                        #          - 1))
                         break
                     except TypeError:
                         continue
@@ -416,8 +421,11 @@ class StockMarketSpider(scrapy.Spider):
     
             # Get 'Q/Q NI Growth' field
             try:
-                net_income_q_q_growth = (data[-1]['v2'] / data[-2]['v2']
-                                         - 1) * 1
+                net_income_q_q_growth = (
+                                                data[-1]['v2'] - data[-2]['v2']
+                                        ) / abs(data[-2]['v2'])
+                # net_income_q_q_growth = (data[-1]['v2'] / data[-2]['v2']
+                #                          - 1) * 1
                 item_loader.add_value('Q/Q NI Growth', net_income_q_q_growth)
             except TypeError:
                 pass
@@ -509,12 +517,16 @@ class StockMarketSpider(scrapy.Spider):
                 for data_piece in data[-5:]:
                     try:
                         esp_previous_4_q = data_piece['v2'] * 1000000000
-                        if esp_current_q > esp_previous_4_q:
-                            esp_yoy_quarterly_growth = abs(
-                                (esp_current_q / esp_previous_4_q - 1))
-                        else:
-                            esp_yoy_quarterly_growth = -abs(
-                                (esp_current_q / esp_previous_4_q - 1))
+                        esp_yoy_quarterly_growth = (
+                            esp_current_q - esp_previous_4_q
+                        ) / abs(esp_previous_4_q)
+                        
+                        # if esp_current_q > esp_previous_4_q:
+                        #     esp_yoy_quarterly_growth = abs(
+                        #         (esp_current_q / esp_previous_4_q - 1))
+                        # else:
+                        #     esp_yoy_quarterly_growth = -abs(
+                        #         (esp_current_q / esp_previous_4_q - 1))
                         break
                     except TypeError:
                         continue
@@ -524,7 +536,10 @@ class StockMarketSpider(scrapy.Spider):
     
             # Get 'Q/Q EPS Growth' field
             try:
-                esp_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 1
+                esp_q_q_growth = (
+                                         data[-1]['v2'] - data[-2]['v2']
+                                 ) / abs(data[-2]['v2'])
+                # esp_q_q_growth = (data[-1]['v2'] / data[-2]['v2'] - 1) * 1
                 item_loader.add_value('Q/Q EPS Growth', esp_q_q_growth)
             except TypeError:
                 pass
